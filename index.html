@@ -30,14 +30,19 @@
   </main>
   <div id="cube-container"></div>
 
-  <script type="module">
-    import * as THREE from 'https://unpkg.com/three@0.128.0/build/three.module.js';
-    import { ARButton } from 'https://unpkg.com/three@0.128.0/examples/jsm/webxr/ARButton.js';
+    <script type="module">
+      import * as THREE from 'https://unpkg.com/three@0.128.0/build/three.module.js';
+      import { ARButton } from 'https://unpkg.com/three@0.128.0/examples/jsm/webxr/ARButton.js';
+      import { GLTFLoader } from 'https://unpkg.com/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
 
     const container = document.getElementById('cube-container');
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera();
+    const loader = new GLTFLoader();
+    loader.setCrossOrigin('anonymous');
+    let mixer;
+    const clock = new THREE.Clock();
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -67,11 +72,17 @@
 
     function onSelect() {
       if (reticle.visible) {
-        const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-        const material = new THREE.MeshNormalMaterial();
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.position.setFromMatrixPosition(reticle.matrix);
-        scene.add(mesh);
+        loader.load('https://illusiontechnique.com/xr/unicorn/assets/Unicorn_00.glb', function (gltf) {
+          const model = gltf.scene;
+          model.position.setFromMatrixPosition(reticle.matrix);
+          scene.add(model);
+          if (gltf.animations && gltf.animations.length) {
+            mixer = new THREE.AnimationMixer(model);
+            const clip = THREE.AnimationClip.findByName(gltf.animations, 'idle') || gltf.animations[0];
+            const action = mixer.clipAction(clip);
+            action.play();
+          }
+        });
       }
     }
 
@@ -106,6 +117,8 @@
         }
       }
 
+      const delta = clock.getDelta();
+      if (mixer) mixer.update(delta);
       renderer.render(scene, camera);
     });
 
