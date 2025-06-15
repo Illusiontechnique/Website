@@ -19,6 +19,24 @@
       height: 400px;
       margin-top: 20px;
     }
+      #hud-top, #hud-bottom {
+        position: fixed;
+        left: 0;
+        width: 100%;
+        z-index: 100;
+        text-align: center;
+      }
+      #hud-top {
+        top: 0;
+        padding: 10px;
+      }
+      #hud-bottom {
+        bottom: 0;
+        padding: 10px;
+      }
+      #hud-bottom input {
+        pointer-events: auto;
+      }
   </style>
 </head>
 <body>
@@ -29,6 +47,8 @@
     <p>This is a simple website served with GitHub Pages.</p>
   </main>
   <div id="cube-container"></div>
+  <div id="hud-top"><div id="logo-placeholder">LOGO</div></div>
+  <div id="hud-bottom"><input type="file" id="model-input" accept=".glb" /></div>
 
     <script type="module">
       import * as THREE from 'https://unpkg.com/three@0.128.0/build/three.module.js';
@@ -68,14 +88,29 @@
     let hitTestSource = null;
     let hitTestSourceRequested = false;
 
-    function onSelect() {
-      if (reticle.visible) {
-        loader.load('https://illusiontechnique.com/xr/unicorn/assets/Unicorn_00.glb', function (gltf) {
-          const model = gltf.scene;
-          model.position.setFromMatrixPosition(reticle.matrix);
-          scene.add(model);
-        });
+    let customModelURL = null;
+    document.getElementById("model-input").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        customModelURL = URL.createObjectURL(file);
       }
+    });
+    function onSelect() {
+        if (reticle.visible) {
+          if (customModelURL) {
+            loader.load(customModelURL, (gltf) => {
+              const model = gltf.scene;
+              model.position.setFromMatrixPosition(reticle.matrix);
+              scene.add(model);
+            });
+          } else {
+            const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+            const material = new THREE.MeshNormalMaterial();
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.setFromMatrixPosition(reticle.matrix);
+            scene.add(mesh);
+          }
+        }
     }
 
     renderer.setAnimationLoop(function (timestamp, frame) {
