@@ -193,9 +193,12 @@
     }
 
     // Check if camera enters any overlay cubes to trigger sounds
+    // Expand the bounding box slightly so the trigger happens even if
+    // the camera is near the edge of the cube
     cubes.forEach(g => {
       if (!g.userData.triggered) {
         const box = new THREE.Box3().setFromObject(g.userData.overlay);
+        box.expandByScalar(0.05); // add ±0.05 units tolerance around the cube
         if (box.containsPoint(camera.position)) {
           playTone(g.userData.waveType);
           g.userData.triggered = true;
