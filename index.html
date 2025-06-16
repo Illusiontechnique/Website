@@ -148,7 +148,7 @@
             );
             group.add(overlay);
             group.position.setFromMatrixPosition(reticle.matrix);
-            group.userData = { waveType, overlay, triggered: false };
+            group.userData = { waveType, overlay, mesh: cube, triggered: false };
 
             if (cubes.length > 0) {
               const last = cubes[cubes.length - 1];
@@ -198,10 +198,17 @@
     cubes.forEach(g => {
       if (!g.userData.triggered) {
         const box = new THREE.Box3().setFromObject(g.userData.overlay);
-        box.expandByScalar(0.05); // add ±0.05 units tolerance around the cube
+        box.expandByScalar(0.15);  // enlarge detection region
         if (box.containsPoint(camera.position)) {
           playTone(g.userData.waveType);
           g.userData.triggered = true;
+          const mat = g.userData.mesh.material;
+          const originalColor = mat.color.getHex();
+          const id = setInterval(() => mat.color.set(Math.random() * 0xffffff), 100);
+          setTimeout(() => {
+            clearInterval(id);
+            mat.color.setHex(originalColor);
+          }, 500);   // matches playTone duration
         }
       }
     });
