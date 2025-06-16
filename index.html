@@ -43,9 +43,9 @@
   <main>
     <p>This is a simple website served with GitHub Pages.</p>
   </main>
-    <div id="cube-container"></div>
-    <div id="hud-top"><div id="logo-placeholder">LOGO</div></div>
-    <div id="hud-bottom"></div>
+      <div id="cube-container"></div>
+      <div id="hud-top"><div id="logo-placeholder">LOGO</div></div>
+      <div id="hud-bottom"></div>
 
     <script type="module">
       import * as THREE from 'https://unpkg.com/three@0.128.0/build/three.module.js';
@@ -210,7 +210,11 @@
       renderer.setSize(container.clientWidth, container.clientHeight);
     }
 
-    window.addEventListener('resize', onWindowResize);
-  </script>
-</body>
+      window.addEventListener('resize', onWindowResize);
+
+      // Display version info and ideal setup in the HUD
+      const hudBottom = document.getElementById('hud-bottom');
+      hudBottom.textContent = `three.js r${THREE.REVISION} - best viewed in a WebXR-enabled browser on a device with AR support.`;
+    </script>
+  </body>
 </html>

@@ -9,3 +9,8 @@ This repository contains a minimal website that can be hosted using GitHub Pages
 3. Visit the generated GitHub Pages URL to see the site.
 
 The main content is in `index.html`. AR cube placement is enabled by default and a simple HUD lets you load a custom `.glb` model instead of the cube.
+
+## Requirements
+
+This site ships with **three.js r128** and requires a browser capable of WebXR's AR features (e.g. Chrome on Android).
+For the best experience, use a mobile device that supports AR and ensure WebXR is enabled.
