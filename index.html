@@ -34,9 +34,6 @@
         bottom: 0;
         padding: 10px;
       }
-      #hud-bottom input {
-        pointer-events: auto;
-      }
   </style>
 </head>
 <body>
@@ -46,21 +43,19 @@
   <main>
     <p>This is a simple website served with GitHub Pages.</p>
   </main>
-  <div id="cube-container"></div>
-  <div id="hud-top"><div id="logo-placeholder">LOGO</div></div>
-  <div id="hud-bottom"><input type="file" id="model-input" accept=".glb" /></div>
+    <div id="cube-container"></div>
+    <div id="hud-top"><div id="logo-placeholder">LOGO</div></div>
+    <div id="hud-bottom"></div>
 
     <script type="module">
       import * as THREE from 'https://unpkg.com/three@0.128.0/build/three.module.js';
       import { ARButton } from 'https://unpkg.com/three@0.128.0/examples/jsm/webxr/ARButton.js';
-      import { GLTFLoader } from 'https://unpkg.com/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
 
     const container = document.getElementById('cube-container');
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera();
-    const loader = new GLTFLoader();
-    loader.setCrossOrigin('anonymous');
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -88,28 +83,24 @@
     let hitTestSource = null;
     let hitTestSourceRequested = false;
 
-    let customModelURL = null;
-    document.getElementById("model-input").addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        customModelURL = URL.createObjectURL(file);
-      }
-    });
     function onSelect() {
         if (reticle.visible) {
-          if (customModelURL) {
-            loader.load(customModelURL, (gltf) => {
-              const model = gltf.scene;
-              model.position.setFromMatrixPosition(reticle.matrix);
-              scene.add(model);
-            });
-          } else {
-            const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-            const material = new THREE.MeshNormalMaterial();
-            const mesh = new THREE.Mesh(geometry, material);
-            mesh.position.setFromMatrixPosition(reticle.matrix);
-            scene.add(mesh);
-          }
+          const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+          const material = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
+          const cube = new THREE.Mesh(geometry, material);
+          const shadow = new THREE.Mesh(
+            new THREE.CircleGeometry(0.07, 32),
+            new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0.25, transparent: true })
+          );
+          shadow.rotateX(-Math.PI / 2);
+          shadow.position.y = -0.051;
+
+          const group = new THREE.Group();
+          group.add(cube);
+          group.add(shadow);
+          group.position.setFromMatrixPosition(reticle.matrix);
+
+          scene.add(group);
         }
     }
 
