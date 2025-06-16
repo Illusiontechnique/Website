@@ -83,26 +83,53 @@
     let hitTestSource = null;
     let hitTestSourceRequested = false;
 
-    function onSelect() {
-        if (reticle.visible) {
-          const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-          const material = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
-          const cube = new THREE.Mesh(geometry, material);
-          const shadow = new THREE.Mesh(
-            new THREE.CircleGeometry(0.07, 32),
-            new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0.25, transparent: true })
-          );
-          shadow.rotateX(-Math.PI / 2);
-          shadow.position.y = -0.051;
+    const cubes = [];
 
-          const group = new THREE.Group();
-          group.add(cube);
-          group.add(shadow);
-          group.position.setFromMatrixPosition(reticle.matrix);
-
-          scene.add(group);
+    function createLightning(start, end) {
+      const segments = 20;
+      const points = [];
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const pos = new THREE.Vector3().lerpVectors(start, end, t);
+        if (i !== 0 && i !== segments) {
+          pos.x += (Math.random() - 0.5) * 0.05;
+          pos.y += (Math.random() - 0.5) * 0.05;
+          pos.z += (Math.random() - 0.5) * 0.05;
         }
+        points.push(pos);
+      }
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
+      return new THREE.Line(geometry, material);
     }
+
+      function onSelect() {
+          if (reticle.visible) {
+            const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+            const material = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
+            const cube = new THREE.Mesh(geometry, material);
+            const shadow = new THREE.Mesh(
+              new THREE.CircleGeometry(0.07, 32),
+              new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0.25, transparent: true })
+            );
+            shadow.rotateX(-Math.PI / 2);
+            shadow.position.y = -0.051;
+
+            const group = new THREE.Group();
+            group.add(cube);
+            group.add(shadow);
+            group.position.setFromMatrixPosition(reticle.matrix);
+
+            if (cubes.length > 0) {
+              const last = cubes[cubes.length - 1];
+              const line = createLightning(last.position, group.position);
+              scene.add(line);
+            }
+
+            cubes.push(group);
+            scene.add(group);
+          }
+      }
 
     renderer.setAnimationLoop(function (timestamp, frame) {
       if (frame) {
