@@ -63,13 +63,25 @@
     renderer.xr.enabled = true;
     container.appendChild(renderer.domElement);
 
+    // Simple Web Audio context for tone generation
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playTone(type) {
+      const osc = audioCtx.createOscillator();
+      osc.type = type;
+      osc.frequency.value = 220 + Math.random() * 440;
+      osc.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.5);
+    }
+
     // Add AR button to start the AR session
     container.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
 
-    // Reticle used for hit testing
+    // Reticle used for hit testing - replaced with a transparent cube
     const reticle = new THREE.Mesh(
-      new THREE.RingGeometry(0.07, 0.09, 32).rotateX(-Math.PI / 2),
-      new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+      new THREE.BoxGeometry(0.1, 0.1, 0.1),
+      new THREE.MeshBasicMaterial({ color: 0x00ff00, opacity: 0.25, transparent: true })
     );
     reticle.matrixAutoUpdate = false;
     reticle.visible = false;
@@ -105,7 +117,19 @@
 
       function onSelect() {
           if (reticle.visible) {
-            const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+            let geometry;
+            let waveType;
+            const r = Math.random();
+            if (r < 0.33) {
+              geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+              waveType = 'square';
+            } else if (r < 0.66) {
+              geometry = new THREE.TetrahedronGeometry(0.1);
+              waveType = 'sawtooth';
+            } else {
+              geometry = new THREE.IcosahedronGeometry(0.1);
+              waveType = 'sine';
+            }
             const material = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
             const cube = new THREE.Mesh(geometry, material);
             const shadow = new THREE.Mesh(
@@ -118,7 +142,13 @@
             const group = new THREE.Group();
             group.add(cube);
             group.add(shadow);
+            const overlay = new THREE.Mesh(
+              new THREE.BoxGeometry(0.2, 0.2, 0.2),
+              new THREE.MeshBasicMaterial({ color: 0x0000ff, opacity: 0.1, transparent: true })
+            );
+            group.add(overlay);
             group.position.setFromMatrixPosition(reticle.matrix);
+            group.userData = { waveType, overlay, triggered: false };
 
             if (cubes.length > 0) {
               const last = cubes[cubes.length - 1];
@@ -149,21 +179,32 @@
           hitTestSourceRequested = true;
         }
 
-        if (hitTestSource) {
-          const hitTestResults = frame.getHitTestResults(hitTestSource);
-          if (hitTestResults.length) {
-            const hit = hitTestResults[0];
-            const pose = hit.getPose(referenceSpace);
-            reticle.visible = true;
-            reticle.matrix.fromArray(pose.transform.matrix);
-          } else {
-            reticle.visible = false;
-          }
+      if (hitTestSource) {
+        const hitTestResults = frame.getHitTestResults(hitTestSource);
+        if (hitTestResults.length) {
+          const hit = hitTestResults[0];
+          const pose = hit.getPose(referenceSpace);
+          reticle.visible = true;
+          reticle.matrix.fromArray(pose.transform.matrix);
+        } else {
+          reticle.visible = false;
         }
       }
+    }
 
-      renderer.render(scene, camera);
+    // Check if camera enters any overlay cubes to trigger sounds
+    cubes.forEach(g => {
+      if (!g.userData.triggered) {
+        const box = new THREE.Box3().setFromObject(g.userData.overlay);
+        if (box.containsPoint(camera.position)) {
+          playTone(g.userData.waveType);
+          g.userData.triggered = true;
+        }
+      }
     });
+
+    renderer.render(scene, camera);
+  });
 
     function onWindowResize() {
       renderer.setSize(container.clientWidth, container.clientHeight);
