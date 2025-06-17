@@ -13,4 +13,5 @@ The main content is in `index.html`. AR cube placement is enabled by default and
 ## Requirements
 
 This site ships with **three.js r128** and requires a browser capable of WebXR's AR features (e.g. Chrome on Android).
+DOM overlay is used to display the HUD and performance stats while in AR. Make sure your browser supports this optional feature.
 For the best experience, use a mobile device that supports AR and ensure WebXR is enabled.
