@@ -34,6 +34,26 @@
         bottom: 0;
         padding: 10px;
       }
+
+      #threshold-slider {
+        position: fixed;
+        left: 10px;
+        bottom: 60px;
+        width: 100px;
+        height: 100px;
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid #333;
+        border-radius: 4px;
+        touch-action: none;
+      }
+      #slider-knob {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        background: #333;
+        border-radius: 50%;
+        pointer-events: none;
+      }
   </style>
 </head>
 <body>
@@ -46,6 +66,7 @@
       <div id="cube-container"></div>
       <div id="hud-top"><div id="logo-placeholder">LOGO</div></div>
       <div id="hud-bottom"></div>
+      <div id="threshold-slider"><div id="slider-knob"></div></div>
 
     <script type="module">
       import * as THREE from 'https://unpkg.com/three@0.128.0/build/three.module.js';
@@ -96,6 +117,9 @@
     let hitTestSourceRequested = false;
 
     const cubes = [];
+
+    // Slider state for collision threshold
+    const threshold = { xz: 0.15, y: 0.15 };
 
     function createLightning(start, end) {
       const segments = 20;
@@ -148,7 +172,7 @@
             );
             group.add(overlay);
             group.position.setFromMatrixPosition(reticle.matrix);
-            group.userData = { waveType, overlay, mesh: cube, triggered: false };
+            group.userData = { waveType, overlay, mesh: cube, inside: false };
 
             if (cubes.length > 0) {
               const last = cubes[cubes.length - 1];
@@ -193,23 +217,24 @@
     }
 
     // Check if camera enters any overlay cubes to trigger sounds
-    // Expand the bounding box slightly so the trigger happens even if
-    // the camera is near the edge of the cube
+    // The detection region can be adjusted using the slider
     cubes.forEach(g => {
-      if (!g.userData.triggered) {
-        const box = new THREE.Box3().setFromObject(g.userData.overlay);
-        box.expandByScalar(0.15);  // enlarge detection region
-        if (box.containsPoint(camera.position)) {
-          playTone(g.userData.waveType);
-          g.userData.triggered = true;
-          const mat = g.userData.mesh.material;
-          const originalColor = mat.color.getHex();
-          const id = setInterval(() => mat.color.set(Math.random() * 0xffffff), 100);
-          setTimeout(() => {
-            clearInterval(id);
-            mat.color.setHex(originalColor);
-          }, 500);   // matches playTone duration
-        }
+      const box = new THREE.Box3().setFromObject(g.userData.overlay);
+      const expandVec = new THREE.Vector3(threshold.xz, threshold.y, threshold.xz);
+      box.expandByVector(expandVec);
+      const inside = box.containsPoint(camera.position);
+      if (inside && !g.userData.inside) {
+        playTone(g.userData.waveType);
+        g.userData.inside = true;
+        const mat = g.userData.mesh.material;
+        const originalColor = mat.color.getHex();
+        const id = setInterval(() => mat.color.set(Math.random() * 0xffffff), 100);
+        setTimeout(() => {
+          clearInterval(id);
+          mat.color.setHex(originalColor);
+        }, 500);
+      } else if (!inside && g.userData.inside) {
+        g.userData.inside = false;
       }
     });
 
@@ -225,6 +250,30 @@
       // Display version info and ideal setup in the HUD
       const hudBottom = document.getElementById('hud-bottom');
       hudBottom.textContent = `three.js r${THREE.REVISION} - best viewed in a WebXR-enabled browser on a device with AR support.`;
+
+      // 2D slider for adjusting collision threshold
+      const slider = document.getElementById('threshold-slider');
+      const knob = document.getElementById('slider-knob');
+
+      function updateKnob(x, y) {
+        knob.style.left = `${x * slider.clientWidth - knob.clientWidth / 2}px`;
+        knob.style.top = `${(1 - y) * slider.clientHeight - knob.clientHeight / 2}px`;
+        threshold.xz = 0.05 + 0.4 * x; // 0.05 - 0.45 range
+        threshold.y = 0.05 + 0.4 * y;
+      }
+
+      function handlePointer(e) {
+        const rect = slider.getBoundingClientRect();
+        const x = Math.min(Math.max(0, (e.clientX - rect.left) / rect.width), 1);
+        const y = Math.min(Math.max(0, (e.clientY - rect.top) / rect.height), 1);
+        updateKnob(x, 1 - y);
+      }
+
+      slider.addEventListener('pointerdown', handlePointer);
+      slider.addEventListener('pointermove', e => { if (e.buttons) handlePointer(e); });
+
+      // initialize knob position
+      updateKnob(0.25, 0.25);
     </script>
   </body>
 </html>
