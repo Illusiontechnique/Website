@@ -45,6 +45,7 @@
         border: 1px solid #333;
         border-radius: 4px;
         touch-action: none;
+        display: none; /* shown after AR session starts */
       }
       #slider-knob {
         position: absolute;
@@ -97,7 +98,10 @@
     }
 
     // Add AR button to start the AR session
-    container.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
+    container.appendChild(ARButton.createButton(renderer, {
+      requiredFeatures: ['hit-test', 'dom-overlay'],
+      domOverlay: { root: document.body }
+    }));
 
     // Reticle used for hit testing - replaced with a transparent cube
     const reticle = new THREE.Mesh(
@@ -254,6 +258,10 @@
       // 2D slider for adjusting collision threshold
       const slider = document.getElementById('threshold-slider');
       const knob = document.getElementById('slider-knob');
+
+      // Show slider only during an AR session
+      renderer.xr.addEventListener('sessionstart', () => slider.style.display = 'block');
+      renderer.xr.addEventListener('sessionend', () => slider.style.display = 'none');
 
       function updateKnob(x, y) {
         knob.style.left = `${x * slider.clientWidth - knob.clientWidth / 2}px`;
