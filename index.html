@@ -88,10 +88,10 @@
     // Simple Web Audio context for tone generation
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    function playTone(type) {
+    function playTone(type, frequency) {
       const osc = audioCtx.createOscillator();
       osc.type = type;
-      osc.frequency.value = 220 + Math.random() * 440;
+      osc.frequency.value = frequency !== undefined ? frequency : 220 + Math.random() * 440;
       osc.connect(audioCtx.destination);
       osc.start();
       osc.stop(audioCtx.currentTime + 0.5);
@@ -125,6 +125,14 @@
     // Slider state for collision threshold
     const threshold = { xz: 0.15, y: 0.15 };
 
+    const detectionSphereRadius = 0.1;
+    const detectionSphere = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(detectionSphereRadius, 2),
+      new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true, opacity: 0.3, transparent: true })
+    );
+    camera.add(detectionSphere);
+    updateDetectionSphere();
+
     function createLightning(start, end) {
       const segments = 20;
       const points = [];
@@ -147,6 +155,7 @@
           if (reticle.visible) {
             let geometry;
             let waveType;
+            let frequency;
             const r = Math.random();
             if (r < 0.33) {
               geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
@@ -176,7 +185,8 @@
             );
             group.add(overlay);
             group.position.setFromMatrixPosition(reticle.matrix);
-            group.userData = { waveType, overlay, mesh: cube, inside: false };
+            frequency = 220 + Math.random() * 440;
+            group.userData = { waveType, frequency, overlay, mesh: cube, inside: false };
 
             if (cubes.length > 0) {
               const last = cubes[cubes.length - 1];
@@ -228,7 +238,7 @@
       box.expandByVector(expandVec);
       const inside = box.containsPoint(camera.position);
       if (inside && !g.userData.inside) {
-        playTone(g.userData.waveType);
+        playTone(g.userData.waveType, g.userData.frequency);
         g.userData.inside = true;
         const mat = g.userData.mesh.material;
         const originalColor = mat.color.getHex();
@@ -263,11 +273,17 @@
       renderer.xr.addEventListener('sessionstart', () => slider.style.display = 'block');
       renderer.xr.addEventListener('sessionend', () => slider.style.display = 'none');
 
+      function updateDetectionSphere() {
+        const radius = detectionSphereRadius + Math.max(threshold.xz, threshold.y);
+        detectionSphere.scale.setScalar(radius / detectionSphereRadius);
+      }
+
       function updateKnob(x, y) {
         knob.style.left = `${x * slider.clientWidth - knob.clientWidth / 2}px`;
         knob.style.top = `${(1 - y) * slider.clientHeight - knob.clientHeight / 2}px`;
         threshold.xz = 0.05 + 0.4 * x; // 0.05 - 0.45 range
         threshold.y = 0.05 + 0.4 * y;
+        updateDetectionSphere();
       }
 
       function handlePointer(e) {
