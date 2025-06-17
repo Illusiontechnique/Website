@@ -19,42 +19,7 @@
       height: 400px;
       margin-top: 20px;
     }
-      #hud-top, #hud-bottom {
-        position: fixed;
-        left: 0;
-        width: 100%;
-        z-index: 100;
-        text-align: center;
-      }
-      #hud-top {
-        top: 0;
-        padding: 10px;
-      }
-      #hud-bottom {
-        bottom: 0;
-        padding: 10px;
-      }
-
-      #threshold-slider {
-        position: fixed;
-        left: 10px;
-        bottom: 60px;
-        width: 100px;
-        height: 100px;
-        background: rgba(255, 255, 255, 0.7);
-        border: 1px solid #333;
-        border-radius: 4px;
-        touch-action: none;
-        display: none; /* shown after AR session starts */
-      }
-      #slider-knob {
-        position: absolute;
-        width: 14px;
-        height: 14px;
-        background: #333;
-        border-radius: 50%;
-        pointer-events: none;
-      }
+      /* GUI and stats are added via scripts */
   </style>
 </head>
 <body>
@@ -65,13 +30,12 @@
     <p>This is a simple website served with GitHub Pages.</p>
   </main>
       <div id="cube-container"></div>
-      <div id="hud-top"><div id="logo-placeholder">LOGO</div></div>
-      <div id="hud-bottom"></div>
-      <div id="threshold-slider"><div id="slider-knob"></div></div>
 
     <script type="module">
       import * as THREE from 'https://unpkg.com/three@0.128.0/build/three.module.js';
       import { ARButton } from 'https://unpkg.com/three@0.128.0/examples/jsm/webxr/ARButton.js';
+      import Stats from 'https://unpkg.com/three@0.128.0/examples/jsm/libs/stats.module.js';
+      import { GUI } from 'https://unpkg.com/three@0.128.0/examples/jsm/libs/dat.gui.module.js';
 
     const container = document.getElementById('cube-container');
 
@@ -84,6 +48,9 @@
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.xr.enabled = true;
     container.appendChild(renderer.domElement);
+
+    const stats = new Stats();
+    document.body.appendChild(stats.dom);
 
     // Simple Web Audio context for tone generation
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -99,8 +66,7 @@
 
     // Add AR button to start the AR session
     container.appendChild(ARButton.createButton(renderer, {
-      requiredFeatures: ['hit-test', 'dom-overlay'],
-      domOverlay: { root: document.body }
+      requiredFeatures: ['hit-test']
     }));
 
     // Reticle used for hit testing - replaced with a transparent cube
@@ -121,6 +87,7 @@
     let hitTestSourceRequested = false;
 
     const cubes = [];
+    let objectCounter = 0;
 
     // Slider state for collision threshold
     const threshold = { xz: 0.15, y: 0.15 };
@@ -132,6 +99,10 @@
     );
     camera.add(detectionSphere);
     updateDetectionSphere();
+
+    const gui = new GUI();
+    gui.add(threshold, 'xz', 0.05, 0.45).onChange(updateDetectionSphere);
+    gui.add(threshold, 'y', 0.05, 0.45).onChange(updateDetectionSphere);
 
     function createLightning(start, end) {
       const segments = 20;
@@ -185,8 +156,24 @@
             );
             group.add(overlay);
             group.position.setFromMatrixPosition(reticle.matrix);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = '48px sans-serif';
+            ctx.fillText(String(objectCounter + 1), 32, 32);
+            const texture = new THREE.CanvasTexture(canvas);
+            const labelMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+            const label = new THREE.Sprite(labelMaterial);
+            label.scale.set(0.15, 0.15, 0.15);
+            group.add(label);
+
             frequency = 220 + Math.random() * 440;
-            group.userData = { waveType, frequency, overlay, mesh: cube, inside: false };
+            group.userData = { waveType, frequency, overlay, mesh: cube, inside: false, label };
 
             if (cubes.length > 0) {
               const last = cubes[cubes.length - 1];
@@ -196,6 +183,7 @@
 
             cubes.push(group);
             scene.add(group);
+            objectCounter++;
           }
       }
 
@@ -231,8 +219,9 @@
     }
 
     // Check if camera enters any overlay cubes to trigger sounds
-    // The detection region can be adjusted using the slider
+    // The detection region can be adjusted using the GUI
     cubes.forEach(g => {
+      g.userData.label.quaternion.copy(camera.quaternion);
       const box = new THREE.Box3().setFromObject(g.userData.overlay);
       const expandVec = new THREE.Vector3(threshold.xz, threshold.y, threshold.xz);
       box.expandByVector(expandVec);
@@ -253,6 +242,7 @@
     });
 
     renderer.render(scene, camera);
+    stats.update();
   });
 
     function onWindowResize() {
@@ -261,43 +251,24 @@
 
       window.addEventListener('resize', onWindowResize);
 
-      // Display version info and ideal setup in the HUD
-      const hudBottom = document.getElementById('hud-bottom');
-      hudBottom.textContent = `three.js r${THREE.REVISION} - best viewed in a WebXR-enabled browser on a device with AR support.`;
+      const header = document.querySelector('header');
+      const main = document.querySelector('main');
+      renderer.xr.addEventListener('sessionstart', () => {
+        header.style.display = 'none';
+        main.style.display = 'none';
+      });
+      renderer.xr.addEventListener('sessionend', () => {
+        header.style.display = '';
+        main.style.display = '';
+      });
 
-      // 2D slider for adjusting collision threshold
-      const slider = document.getElementById('threshold-slider');
-      const knob = document.getElementById('slider-knob');
-
-      // Show slider only during an AR session
-      renderer.xr.addEventListener('sessionstart', () => slider.style.display = 'block');
-      renderer.xr.addEventListener('sessionend', () => slider.style.display = 'none');
+      // Display version info in the console
+      console.log(`three.js r${THREE.REVISION}`);
 
       function updateDetectionSphere() {
         const radius = detectionSphereRadius + Math.max(threshold.xz, threshold.y);
         detectionSphere.scale.setScalar(radius / detectionSphereRadius);
       }
-
-      function updateKnob(x, y) {
-        knob.style.left = `${x * slider.clientWidth - knob.clientWidth / 2}px`;
-        knob.style.top = `${(1 - y) * slider.clientHeight - knob.clientHeight / 2}px`;
-        threshold.xz = 0.05 + 0.4 * x; // 0.05 - 0.45 range
-        threshold.y = 0.05 + 0.4 * y;
-        updateDetectionSphere();
-      }
-
-      function handlePointer(e) {
-        const rect = slider.getBoundingClientRect();
-        const x = Math.min(Math.max(0, (e.clientX - rect.left) / rect.width), 1);
-        const y = Math.min(Math.max(0, (e.clientY - rect.top) / rect.height), 1);
-        updateKnob(x, 1 - y);
-      }
-
-      slider.addEventListener('pointerdown', handlePointer);
-      slider.addEventListener('pointermove', e => { if (e.buttons) handlePointer(e); });
-
-      // initialize knob position
-      updateKnob(0.25, 0.25);
     </script>
   </body>
 </html>
