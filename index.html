@@ -51,6 +51,7 @@
 
     const stats = new Stats();
     document.body.appendChild(stats.dom);
+    stats.dom.style.display = 'none';
 
     // Simple Web Audio context for tone generation
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -64,9 +65,10 @@
       osc.stop(audioCtx.currentTime + 0.5);
     }
 
-    // Add AR button to start the AR session
+    // Add AR button to start the AR session with DOM overlay
     container.appendChild(ARButton.createButton(renderer, {
-      requiredFeatures: ['hit-test']
+      requiredFeatures: ['hit-test', 'dom-overlay'],
+      domOverlay: { root: document.body }
     }));
 
     // Reticle used for hit testing - replaced with a transparent cube
@@ -101,6 +103,7 @@
     updateDetectionSphere();
 
     const gui = new GUI();
+    gui.domElement.style.display = 'none';
     gui.add(threshold, 'xz', 0.05, 0.45).onChange(updateDetectionSphere);
     gui.add(threshold, 'y', 0.05, 0.45).onChange(updateDetectionSphere);
 
@@ -256,10 +259,14 @@
       renderer.xr.addEventListener('sessionstart', () => {
         header.style.display = 'none';
         main.style.display = 'none';
+        stats.dom.style.display = '';
+        gui.domElement.style.display = '';
       });
       renderer.xr.addEventListener('sessionend', () => {
         header.style.display = '';
         main.style.display = '';
+        stats.dom.style.display = 'none';
+        gui.domElement.style.display = 'none';
       });
 
       // Display version info in the console
