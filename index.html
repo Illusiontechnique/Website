@@ -63,6 +63,11 @@
 
     const container = document.getElementById('cube-container');
 
+    // Create overlay container for DOM overlay elements
+    const overlayRoot = document.createElement('div');
+    overlayRoot.id = 'overlay';
+    document.body.appendChild(overlayRoot);
+
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera();
     scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
@@ -74,7 +79,7 @@
     container.appendChild(renderer.domElement);
 
     const stats = new Stats();
-    document.body.appendChild(stats.dom);
+    overlayRoot.appendChild(stats.dom);
     stats.dom.style.display = 'none';
 
     // Tone.js synth setup for bell-like tones
@@ -95,7 +100,7 @@
     // Add AR button to start the AR session with DOM overlay
     container.appendChild(ARButton.createButton(renderer, {
       requiredFeatures: ['hit-test', 'dom-overlay'],
-      domOverlay: { root: document.body }
+      domOverlay: { root: document.getElementById('overlay') }
     }));
 
     // Reticle used for hit testing - replaced with a transparent cube
@@ -129,7 +134,8 @@
     camera.add(detectionSphere);
     updateDetectionSphere();
 
-    const gui = new GUI();
+    const gui = new GUI({ autoPlace: false });
+    overlayRoot.appendChild(gui.domElement);
     gui.domElement.style.display = 'none';
     gui.add(threshold, 'xz', 0.05, 0.45).onChange(updateDetectionSphere);
     gui.add(threshold, 'y', 0.05, 0.45).onChange(updateDetectionSphere);
