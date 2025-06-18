@@ -47,7 +47,7 @@
         <ol>
           <li>Clone the repository.</li>
           <li>Enable GitHub Pages in the repository settings, using the main branch.</li>
-          <li>Visit the generated GitHub Pages URL to see the site. The page loads <code>three.js</code> modules directly from GitHub so it works even if CDNs like <strong>unpkg</strong> are blocked.</li>
+          <li>Visit the generated GitHub Pages URL to see the site. The page loads <code>three.js</code> modules from the repository itself so it works even if CDNs like <strong>unpkg</strong> are blocked.</li>
         </ol>
         <p>The main content is in <code>index.html</code>. An <strong>Enter AR</strong> button is provided by <code>three.js</code> to start and exit the AR session. Use the <strong>Enable light estimation</strong> checkbox to choose whether light estimation will be used before entering AR.</p>
         <h3>Requirements</h3>
@@ -55,10 +55,10 @@
       </section>
 
     <script type="module">
-      import * as THREE from 'https://unpkg.com/three@0.128.0/build/three.module.js';
-      import { ARButton } from 'https://unpkg.com/three@0.128.0/examples/jsm/webxr/ARButton.js';
-      import Stats from 'https://unpkg.com/three@0.128.0/examples/jsm/libs/stats.module.js';
-      import { GUI } from 'https://unpkg.com/three@0.128.0/examples/jsm/libs/dat.gui.module.js';
+      import * as THREE from './js/three.module.js';
+      import { ARButton } from './js/examples/jsm/webxr/ARButton.js';
+      import Stats from './js/examples/jsm/libs/stats.module.js';
+      import { GUI } from './js/examples/jsm/libs/dat.gui.module.js';
       import * as Tone from './tone/build/esm/index.js';
 
     const container = document.getElementById('cube-container');
