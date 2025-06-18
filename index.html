@@ -9,7 +9,16 @@
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 2rem;
-      background-color: #f6f6f6;
+      color: #fff;
+      background: radial-gradient(circle at 50% 50%, #ff00ff, #00ffff, #ffff00, #ff00ff);
+      background-size: 400% 400%;
+      animation: psychedelic-bg 20s linear infinite;
+    }
+
+    @keyframes psychedelic-bg {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
     header {
       text-align: center;
@@ -31,6 +40,20 @@
   </main>
       <div id="cube-container"></div>
 
+      <section id="readme">
+        <h2>Website</h2>
+        <p>This repository contains a minimal website that can be hosted using GitHub Pages.</p>
+        <h3>Getting Started</h3>
+        <ol>
+          <li>Clone the repository.</li>
+          <li>Enable GitHub Pages in the repository settings, using the main branch.</li>
+          <li>Visit the generated GitHub Pages URL to see the site. The page loads <code>three.js</code> modules directly from GitHub so it works even if CDNs like <strong>unpkg</strong> are blocked.</li>
+        </ol>
+        <p>The main content is in <code>index.html</code>. An <strong>Enter AR</strong> button is provided by <code>three.js</code> to start and exit the AR session. Use the <strong>Enable light estimation</strong> checkbox to choose whether light estimation will be used before entering AR.</p>
+        <h3>Requirements</h3>
+        <p>This site ships with <strong>three.js r128</strong> and requires a browser capable of WebXR's AR features (e.g. Chrome on Android). DOM overlay is used to display the HUD and performance stats while in AR. Make sure your browser supports this optional feature. For the best experience, use a mobile device that supports AR and ensure WebXR is enabled.</p>
+      </section>
+
     <script type="module">
       import * as THREE from 'https://unpkg.com/three@0.128.0/build/three.module.js';
       import { ARButton } from 'https://unpkg.com/three@0.128.0/examples/jsm/webxr/ARButton.js';
@@ -51,6 +74,7 @@
 
     const stats = new Stats();
     document.body.appendChild(stats.dom);
+    stats.dom.style.display = 'none';
 
     // Simple Web Audio context for tone generation
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -64,9 +88,10 @@
       osc.stop(audioCtx.currentTime + 0.5);
     }
 
-    // Add AR button to start the AR session
+    // Add AR button to start the AR session with DOM overlay
     container.appendChild(ARButton.createButton(renderer, {
-      requiredFeatures: ['hit-test']
+      requiredFeatures: ['hit-test', 'dom-overlay'],
+      domOverlay: { root: document.body }
     }));
 
     // Reticle used for hit testing - replaced with a transparent cube
@@ -101,6 +126,7 @@
     updateDetectionSphere();
 
     const gui = new GUI();
+    gui.domElement.style.display = 'none';
     gui.add(threshold, 'xz', 0.05, 0.45).onChange(updateDetectionSphere);
     gui.add(threshold, 'y', 0.05, 0.45).onChange(updateDetectionSphere);
 
@@ -256,10 +282,14 @@
       renderer.xr.addEventListener('sessionstart', () => {
         header.style.display = 'none';
         main.style.display = 'none';
+        stats.dom.style.display = '';
+        gui.domElement.style.display = '';
       });
       renderer.xr.addEventListener('sessionend', () => {
         header.style.display = '';
         main.style.display = '';
+        stats.dom.style.display = 'none';
+        gui.domElement.style.display = 'none';
       });
 
       // Display version info in the console
