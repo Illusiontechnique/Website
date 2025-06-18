@@ -59,6 +59,7 @@
       import { ARButton } from 'https://unpkg.com/three@0.128.0/examples/jsm/webxr/ARButton.js';
       import Stats from 'https://unpkg.com/three@0.128.0/examples/jsm/libs/stats.module.js';
       import { GUI } from 'https://unpkg.com/three@0.128.0/examples/jsm/libs/dat.gui.module.js';
+      import * as Tone from './tone/build/esm/index.js';
 
     const container = document.getElementById('cube-container');
 
@@ -76,16 +77,19 @@
     document.body.appendChild(stats.dom);
     stats.dom.style.display = 'none';
 
-    // Simple Web Audio context for tone generation
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Tone.js synth setup for bell-like tones
+    const synth = new Tone.PolySynth(Tone.AMSynth, {
+      volume: -8,
+      envelope: { attack: 0.01, decay: 1.0, sustain: 0, release: 2 }
+    }).toDestination();
 
-    function playTone(type, frequency) {
-      const osc = audioCtx.createOscillator();
-      osc.type = type;
-      osc.frequency.value = frequency !== undefined ? frequency : 220 + Math.random() * 440;
-      osc.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.5);
+    // Define a scale and helper to pick notes from it
+    const root = 'A4';
+    const minorIntervals = [0, 2, 3, 5, 7, 8, 10];
+    const scale = minorIntervals.map(i => Tone.Frequency(root).transpose(i).toNote());
+
+    function playTone(note) {
+      synth.triggerAttackRelease(note, '2n');
     }
 
     // Add AR button to start the AR session with DOM overlay
@@ -151,18 +155,14 @@
       function onSelect() {
           if (reticle.visible) {
             let geometry;
-            let waveType;
-            let frequency;
+            let note = scale[Math.floor(Math.random() * scale.length)];
             const r = Math.random();
             if (r < 0.33) {
               geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-              waveType = 'square';
             } else if (r < 0.66) {
               geometry = new THREE.TetrahedronGeometry(0.1);
-              waveType = 'sawtooth';
             } else {
               geometry = new THREE.IcosahedronGeometry(0.1);
-              waveType = 'sine';
             }
             const material = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
             const cube = new THREE.Mesh(geometry, material);
@@ -198,8 +198,8 @@
             label.scale.set(0.15, 0.15, 0.15);
             group.add(label);
 
-            frequency = 220 + Math.random() * 440;
-            group.userData = { waveType, frequency, overlay, mesh: cube, inside: false, label };
+            note = note || scale[Math.floor(Math.random() * scale.length)];
+            group.userData = { note, overlay, mesh: cube, inside: false, label };
 
             if (cubes.length > 0) {
               const last = cubes[cubes.length - 1];
@@ -253,7 +253,7 @@
       box.expandByVector(expandVec);
       const inside = box.containsPoint(camera.position);
       if (inside && !g.userData.inside) {
-        playTone(g.userData.waveType, g.userData.frequency);
+        playTone(g.userData.note);
         g.userData.inside = true;
         const mat = g.userData.mesh.material;
         const originalColor = mat.color.getHex();
