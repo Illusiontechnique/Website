@@ -28,12 +28,14 @@
   </header>
   <main>
     <p>This is a simple website served with GitHub Pages.</p>
+    <label><input type="checkbox" id="light-toggle"> Enable light estimation</label>
   </main>
       <div id="cube-container"></div>
 
     <script type="module">
       import * as THREE from 'https://unpkg.com/three@0.128.0/build/three.module.js';
       import { ARButton } from 'https://unpkg.com/three@0.128.0/examples/jsm/webxr/ARButton.js';
+      import { XREstimatedLight } from 'https://unpkg.com/three@0.128.0/examples/jsm/webxr/XREstimatedLight.js';
       import Stats from 'https://unpkg.com/three@0.128.0/examples/jsm/libs/stats.module.js';
       import { GUI } from 'https://unpkg.com/three@0.128.0/examples/jsm/libs/dat.gui.module.js';
 
@@ -41,7 +43,8 @@
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera();
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
+    const hemLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+    scene.add(hemLight);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -65,11 +68,21 @@
       osc.stop(audioCtx.currentTime + 0.5);
     }
 
-    // Add AR button to start the AR session with DOM overlay
-    container.appendChild(ARButton.createButton(renderer, {
-      requiredFeatures: ['hit-test', 'dom-overlay'],
-      domOverlay: { root: document.body }
-    }));
+    // Create AR button based on light estimation toggle
+    const lightToggle = document.getElementById('light-toggle');
+    let arButton;
+    function createARButton() {
+      if (arButton) arButton.remove();
+      const options = {
+        requiredFeatures: ['hit-test', 'dom-overlay'],
+        domOverlay: { root: document.body }
+      };
+      if (lightToggle.checked) options.optionalFeatures = ['light-estimation'];
+      arButton = ARButton.createButton(renderer, options);
+      container.appendChild(arButton);
+    }
+    lightToggle.addEventListener('change', createARButton);
+    createARButton();
 
     // Reticle used for hit testing - replaced with a transparent cube
     const reticle = new THREE.Mesh(
@@ -107,6 +120,33 @@
     gui.add(threshold, 'xz', 0.05, 0.45).onChange(updateDetectionSphere);
     gui.add(threshold, 'y', 0.05, 0.45).onChange(updateDetectionSphere);
 
+    // Light estimation support
+    let xrLight;
+    let savedEnv;
+    function initLightEstimation() {
+      if (xrLight) return;
+      xrLight = new XREstimatedLight(renderer);
+      xrLight.addEventListener('estimationstart', () => {
+        if (xrLight.environment) {
+          savedEnv = scene.environment;
+          scene.environment = xrLight.environment;
+        }
+        hemLight.visible = false;
+      });
+      xrLight.addEventListener('estimationend', () => {
+        scene.environment = savedEnv;
+        hemLight.visible = true;
+      });
+      scene.add(xrLight);
+    }
+    function disposeLightEstimation() {
+      if (!xrLight) return;
+      scene.remove(xrLight);
+      hemLight.visible = true;
+      scene.environment = savedEnv;
+      xrLight = null;
+    }
+
     function createLightning(start, end) {
       const segments = 20;
       const points = [];
@@ -141,7 +181,10 @@
               geometry = new THREE.IcosahedronGeometry(0.1);
               waveType = 'sine';
             }
-            const material = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
+            const matOptions = xrLight ?
+              { color: 0xffffff, metalness: 1, roughness: 0.2 } :
+              { color: Math.random() * 0xffffff };
+            const material = new THREE.MeshStandardMaterial(matOptions);
             const cube = new THREE.Mesh(geometry, material);
             const shadow = new THREE.Mesh(
               new THREE.CircleGeometry(0.07, 32),
@@ -261,12 +304,14 @@
         main.style.display = 'none';
         stats.dom.style.display = '';
         gui.domElement.style.display = '';
+        if (lightToggle.checked) initLightEstimation();
       });
       renderer.xr.addEventListener('sessionend', () => {
         header.style.display = '';
         main.style.display = '';
         stats.dom.style.display = 'none';
         gui.domElement.style.display = 'none';
+        disposeLightEstimation();
       });
 
       // Display version info in the console
