@@ -29,6 +29,7 @@
       margin-top: 20px;
     }
     #exit-ar {
+      display: none;
       position: absolute;
       bottom: 20px;
       right: 20px;
@@ -314,12 +315,14 @@
         main.style.display = 'none';
         stats.dom.style.display = '';
         gui.domElement.style.display = '';
+        exitButton.style.display = '';
       });
       renderer.xr.addEventListener('sessionend', () => {
         header.style.display = '';
         main.style.display = '';
         stats.dom.style.display = 'none';
         gui.domElement.style.display = 'none';
+        exitButton.style.display = 'none';
       });
 
       // Display version info in the console

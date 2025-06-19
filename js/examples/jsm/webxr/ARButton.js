@@ -54,7 +54,7 @@ class ARButton {
 
 				await renderer.xr.setSession( session );
 
-				button.textContent = 'STOP AR';
+                                button.textContent = 'EXIT AR';
 				sessionInit.domOverlay.root.style.display = '';
 
 				currentSession = session;
@@ -65,7 +65,7 @@ class ARButton {
 
 				currentSession.removeEventListener( 'end', onSessionEnded );
 
-				button.textContent = 'START AR';
+                                button.textContent = 'ENTER AR';
 				sessionInit.domOverlay.root.style.display = 'none';
 
 				currentSession = null;
@@ -80,7 +80,7 @@ class ARButton {
 			button.style.left = 'calc(50% - 50px)';
 			button.style.width = '100px';
 
-			button.textContent = 'START AR';
+                        button.textContent = 'ENTER AR';
 
 			button.onmouseenter = function () {
 
@@ -158,7 +158,7 @@ class ARButton {
                        button.style.cursor = 'pointer';
                        button.style.left = 'calc(50% - 50px)';
                        button.style.width = '100px';
-                       button.textContent = 'START AR';
+                       button.textContent = 'ENTER AR';
 
                        navigator.xr.isSessionSupported( 'immersive-ar' ).then( function ( supported ) {
 
