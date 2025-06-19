@@ -152,14 +152,17 @@ class ARButton {
 
 		if ( 'xr' in navigator ) {
 
-			button.id = 'ARButton';
-			button.style.display = 'none';
+                       button.id = 'ARButton';
+                       stylizeElement( button );
+                       button.style.display = '';
+                       button.style.cursor = 'pointer';
+                       button.style.left = 'calc(50% - 50px)';
+                       button.style.width = '100px';
+                       button.textContent = 'START AR';
 
-			stylizeElement( button );
+                       navigator.xr.isSessionSupported( 'immersive-ar' ).then( function ( supported ) {
 
-			navigator.xr.isSessionSupported( 'immersive-ar' ).then( function ( supported ) {
-
-				supported ? showStartAR() : showARNotSupported();
+                               supported ? showStartAR() : showARNotSupported();
 
 			} ).catch( showARNotSupported );
 
