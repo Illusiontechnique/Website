@@ -124,7 +124,8 @@
 
     // Add AR button to start the AR session with DOM overlay
     container.appendChild(ARButton.createButton(renderer, {
-      requiredFeatures: ['hit-test', 'dom-overlay'],
+      requiredFeatures: ['hit-test'],
+      optionalFeatures: ['dom-overlay'],
       domOverlay: { root: document.getElementById('overlay') }
     }));
 
